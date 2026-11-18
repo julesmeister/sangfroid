@@ -1,0 +1,38 @@
+*.iml
+
+# Gradle / local build state
+.gradle/
+.kotlin/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Local machine configuration
+local.properties
+
+# Android Studio
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# macOS
+.DS_Store
+
+# Temporary speech-model downloads/extraction only
+whisper-model-temp/
+sherpa-model-temp/
+*.tar.bz2
+
+# Speech models are local build assets
+app/src/main/assets/speech_models/
+
+# Temporary speech model downloads/extraction
+whisper-model-temp/
+sherpa-model-temp/
+*.onnx
+*.tar.bz2

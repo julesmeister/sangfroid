@@ -1,0 +1,32 @@
+package com.julesmeister.sangfroid.domain.model
+
+enum class SkillCode {
+    GENERAL,
+    COMMUNICATION,
+    SELF_INTRODUCTION,
+    MOTIVATION,
+    LEADERSHIP,
+    TEAMWORK,
+    CONFLICT_RESOLUTION,
+    PROBLEM_SOLVING,
+    TIME_MANAGEMENT,
+    ADAPTABILITY,
+    OWNERSHIP,
+    FEEDBACK,
+    KOTLIN,
+    ANDROID,
+    JAVA,
+    SPRING_BOOT,
+    ANGULAR,
+    REST_API,
+    HTTP,
+    SQL,
+    NOSQL,
+    DYNAMODB,
+    AWS,
+    GIT,
+    CI_CD,
+    TESTING,
+    SECURITY,
+    SYSTEM_DESIGN
+}
