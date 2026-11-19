@@ -197,6 +197,58 @@ private fun PracticeContent(
         )
     }
 
+    /*
+     * Clicking Ideal answer or Refresh can transfer focus away from the
+     * BasicTextField before the ViewModel publishes isGeneratingIdealAnswer.
+     *
+     * Without this local pin, compact becomes false for one composition.
+     * PracticeScrollableContent then switches back to its normal scroll
+     * layout, whose initial position is the top of the screen.
+     *
+     * Set this before invoking the ViewModel so the editor remains expanded
+     * continuously, including the frame before generation state arrives.
+     */
+    var isIdealAnswerRequestPinned by
+    remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    /*
+     * Records whether the ViewModel has actually entered generation.
+     * This prevents the local pin from being removed immediately while
+     * isGeneratingIdealAnswer is still false during the first frame.
+     */
+    var hasObservedIdealAnswerGeneration by
+    remember {
+        mutableStateOf(
+            false
+        )
+    }
+
+    LaunchedEffect(
+        uiState.isGeneratingIdealAnswer
+    ) {
+        if (
+            uiState.isGeneratingIdealAnswer
+        ) {
+            hasObservedIdealAnswerGeneration =
+                true
+
+            isIdealAnswerRequestPinned =
+                true
+        } else if (
+            hasObservedIdealAnswerGeneration
+        ) {
+            hasObservedIdealAnswerGeneration =
+                false
+
+            isIdealAnswerRequestPinned =
+                false
+        }
+    }
+
     val isEditing =
         isEditorFocused ||
                 isKeyboardVisible
@@ -205,9 +257,22 @@ private fun PracticeContent(
         speechUiState.isRecording ||
                 speechUiState.isProcessing
 
+    /*
+     * Keep PracticeScrollableContent in its expanded editor layout for the
+     * complete ideal-answer request. This preserves the visible editor top
+     * instead of recreating the normal scrollable layout at scroll position 0.
+     */
+    val shouldKeepEditorExpanded =
+        isEditing ||
+                isVoiceActive ||
+                isIdealAnswerRequestPinned ||
+                uiState.isGeneratingIdealAnswer
+
     val isInteractionActive =
         isEditing ||
                 isVoiceActive ||
+                isIdealAnswerRequestPinned ||
+                uiState.isGeneratingIdealAnswer ||
                 uiState.isViewingHistoricalAttempt
 
     val dismissEditor:
@@ -239,6 +304,47 @@ private fun PracticeContent(
         )
     }
 
+    val requestIdealAnswer:
+                () -> Unit = {
+        if (
+            !uiState.isGeneratingIdealAnswer
+        ) {
+            /*
+             * Pin first, then invoke the ViewModel.
+             *
+             * The ordering is intentional. It prevents the click-induced
+             * focus loss from collapsing the editor before loading begins.
+             */
+            isIdealAnswerRequestPinned =
+                true
+
+            hasObservedIdealAnswerGeneration =
+                false
+
+            onShowIdealAnswer()
+        }
+    }
+
+    val refreshIdealAnswer:
+                () -> Unit = {
+        if (
+            !uiState.isGeneratingIdealAnswer
+        ) {
+            /*
+             * Refresh uses the same local pin. The current typed answer,
+             * current ghost guide, and editor position remain visible while
+             * the replacement guide is generated.
+             */
+            isIdealAnswerRequestPinned =
+                true
+
+            hasObservedIdealAnswerGeneration =
+                false
+
+            onRefreshIdealAnswer()
+        }
+    }
+
     val handleBack:
                 () -> Unit = {
         when {
@@ -249,6 +355,15 @@ private fun PracticeContent(
             }
 
             speechUiState.isProcessing -> {
+                Unit
+            }
+
+            uiState.isGeneratingIdealAnswer ||
+                    isIdealAnswerRequestPinned -> {
+                /*
+                 * Do not collapse or navigate while the remote request is
+                 * running. The ViewModel owns cancellation/lifecycle cleanup.
+                 */
                 Unit
             }
 
@@ -339,15 +454,12 @@ private fun PracticeContent(
                             isEditorFocused =
                                 focused
                         },
-                        onShowIdealAnswer = {
-                            onShowIdealAnswer()
-                        },
-                        onRefreshIdealAnswer = {
-                            onRefreshIdealAnswer()
-                        },
+                        onShowIdealAnswer =
+                            requestIdealAnswer,
+                        onRefreshIdealAnswer =
+                            refreshIdealAnswer,
                         compact =
-                            isEditing ||
-                                    isVoiceActive,
+                            shouldKeepEditorExpanded,
                         modifier =
                             Modifier
                                 .fillMaxWidth()

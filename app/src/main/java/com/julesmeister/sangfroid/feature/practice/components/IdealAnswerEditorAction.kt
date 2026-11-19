@@ -1,24 +1,19 @@
 // app/src/main/java/com/julesmeister/sangfroid/feature/practice/components/IdealAnswerEditorAction.kt
 
 package com.julesmeister.sangfroid.feature.practice.components
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
+
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,6 +26,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -38,6 +34,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.julesmeister.sangfroid.core.designsystem.dimensions.SangfroidAlpha
+import com.julesmeister.sangfroid.core.designsystem.dimensions.SangfroidSpacing
+import com.julesmeister.sangfroid.core.designsystem.theme.SangfroidCyan
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -122,11 +120,11 @@ fun IdealAnswerEditorAction(
                         actionDescription,
                     onClick =
                         action
+                )
+                .padding(
+                    start =
+                        SangfroidSpacing.Sm
                 ),
-        horizontalArrangement =
-            Arrangement.spacedBy(
-                7.dp
-            ),
         verticalAlignment =
             Alignment.CenterVertically
     ) {
@@ -134,64 +132,62 @@ fun IdealAnswerEditorAction(
             CompactRoseOrbitLoader(
                 modifier =
                     Modifier.size(
-                        20.dp
+                        18.dp
                     )
             )
         }
 
-        AnimatedContent(
-            targetState =
+        Text(
+            text =
                 actionLabel,
-            transitionSpec = {
-                (
-                        fadeIn(
-                            animationSpec =
-                                tween(
-                                    durationMillis =
-                                        180
-                                )
-                        ) togetherWith
-                                fadeOut(
-                                    animationSpec =
-                                        tween(
-                                            durationMillis =
-                                                120
-                                        )
-                                )
-                        )
-                    .using(
-                        SizeTransform(
-                            clip =
-                                false
-                        )
+            modifier =
+                Modifier
+                    .padding(
+                        start =
+                            if (isGenerating) {
+                                6.dp
+                            } else {
+                                0.dp
+                            }
                     )
-            },
-            label =
-                "ideal-answer-editor-action"
-        ) { label ->
-            Text(
-                text =
-                    label,
-                style =
-                    MaterialTheme
-                        .typography
-                        .labelSmall,
-                fontWeight =
-                    FontWeight.Bold,
-                color =
-                    if (isGenerating) {
+                    .alignBy(
+                        FirstBaseline
+                    ),
+            style =
+                MaterialTheme
+                    .typography
+                    .labelSmall,
+            fontWeight =
+                when {
+                    isGenerating ->
+                        FontWeight.Normal
+
+                    hasIdealAnswer ->
+                        FontWeight.Bold
+
+                    else ->
+                        FontWeight.Bold
+                },
+            color =
+                when {
+                    isGenerating ->
                         MaterialTheme
                             .colorScheme
                             .onSurfaceVariant
-                    } else {
+
+                    hasIdealAnswer ->
                         MaterialTheme
                             .colorScheme
-                            .primary
-                    },
-                maxLines =
-                    1
-            )
-        }
+                            .onSurface
+
+                    else ->
+                        MaterialTheme
+                            .colorScheme
+                            .onSurface
+                },
+            maxLines =
+                1
+        )
     }
 }
 
@@ -216,7 +212,7 @@ private fun CompactRoseOrbitLoader(
                 animation =
                     tween(
                         durationMillis =
-                            1_850,
+                            2_100,
                         easing =
                             LinearEasing
                     ),
@@ -238,7 +234,7 @@ private fun CompactRoseOrbitLoader(
                 animation =
                     tween(
                         durationMillis =
-                            2_400,
+                            2_800,
                         easing =
                             LinearEasing
                     ),
@@ -260,7 +256,7 @@ private fun CompactRoseOrbitLoader(
                 animation =
                     tween(
                         durationMillis =
-                            8_000,
+                            9_000,
                         easing =
                             LinearEasing
                     ),
@@ -272,14 +268,12 @@ private fun CompactRoseOrbitLoader(
     )
 
     val particleColor =
-        MaterialTheme
-            .colorScheme
-            .secondary
+        SangfroidCyan
 
     val orbitColor =
         MaterialTheme
             .colorScheme
-            .onSurfaceVariant
+            .onSurface
 
     Canvas(
         modifier =
@@ -290,11 +284,11 @@ private fun CompactRoseOrbitLoader(
     ) {
         val orbitRadius =
             size.minDimension *
-                    0.28f
+                    0.34f
 
         val detailAmplitude =
             size.minDimension *
-                    0.085f
+                    0.095f
 
         val center =
             Offset(
@@ -310,10 +304,10 @@ private fun CompactRoseOrbitLoader(
             5
 
         val particleCount =
-            22
+            28
 
         val trailSpan =
-            0.34f
+            0.38f
 
         val twoPi =
             2f *
@@ -343,12 +337,12 @@ private fun CompactRoseOrbitLoader(
 
         for (
         index in
-        0..160
+        0..200
         ) {
             val angle =
                 (
                         index /
-                                160f
+                                200f
                         ) *
                         twoPi
 
@@ -394,12 +388,12 @@ private fun CompactRoseOrbitLoader(
             color =
                 orbitColor.copy(
                     alpha =
-                        0.20f
+                        0.42f
                 ),
             style =
                 Stroke(
                     width =
-                        1.15.dp
+                        1.25.dp
                             .toPx(),
                     cap =
                         StrokeCap.Round
@@ -461,19 +455,19 @@ private fun CompactRoseOrbitLoader(
                         1f -
                                 tailOffset
                         ).pow(
-                        0.56f
+                        0.52f
                     )
 
             val alpha =
-                0.10f +
+                0.32f +
                         fade *
-                        0.90f
+                        0.68f
 
             val particleRadius =
                 (
-                        0.35f +
+                        0.45f +
                                 fade *
-                                1.05f
+                                1.15f
                         ).dp
                     .toPx()
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import com.julesmeister.sangfroid.core.designsystem.theme.SangfroidCyan
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -92,14 +93,12 @@ fun RoseOrbitLoader(
      *     neutral but visible underlying orbit.
      */
     val particleColor =
-        MaterialTheme
-            .colorScheme
-            .secondary
+        SangfroidCyan
 
     val orbitColor =
         MaterialTheme
             .colorScheme
-            .onSurfaceVariant
+            .onSurface
 
     Canvas(
         modifier = modifier
@@ -213,13 +212,13 @@ fun RoseOrbitLoader(
                 path,
             color =
                 orbitColor.copy(
-                    alpha = 0.20f
+                    alpha =
+                        0.34f
                 ),
             style =
                 Stroke(
                     width =
-                        2.6.dp
-                            .toPx(),
+                        1.15.dp.toPx(),
                     cap =
                         StrokeCap.Round
                 )

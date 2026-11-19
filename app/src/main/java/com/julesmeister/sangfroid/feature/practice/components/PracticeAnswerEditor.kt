@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import com.julesmeister.sangfroid.core.designsystem.dimensions.SangfroidDimensions
 import com.julesmeister.sangfroid.core.designsystem.dimensions.SangfroidSpacing
 import java.util.Locale
@@ -52,6 +55,9 @@ private const val BringIntoViewDelayMillis =
 
 private const val GuideLookAheadWords =
     5
+
+private val EditorFooterHeight =
+    36.dp
 
 private val GuideWordPattern =
     Regex(
@@ -166,6 +172,22 @@ fun PracticeAnswerEditor(
                                 isFocused
                         )
 
+    val footerMessage =
+        when {
+            isProcessing ->
+                "Refining transcript offline…"
+
+            isGeneratingIdealAnswer ->
+                "Preparing a guide…"
+
+            normalizedSuggestedScript !=
+                    null ->
+                "Light text is a guide only"
+
+            else ->
+                "Draft saves automatically"
+        }
+
     Box(
         modifier =
             modifier
@@ -255,7 +277,8 @@ fun PracticeAnswerEditor(
                         end =
                             SangfroidSpacing.Xs,
                         bottom =
-                            SangfroidSpacing.Xl
+                            EditorFooterHeight +
+                                    SangfroidSpacing.Xs
                     ),
             textStyle =
                 MaterialTheme
@@ -306,123 +329,132 @@ fun PracticeAnswerEditor(
             exit =
                 fadeOut(),
             modifier =
-                Modifier.align(
-                    Alignment.BottomStart
-                )
-        ) {
-            Text(
-                text =
-                    when {
-                        isProcessing ->
-                            "Refining transcript offline…"
-
-                        isGeneratingIdealAnswer ->
-                            "Preparing a guide…"
-
-                        normalizedSuggestedScript !=
-                                null ->
-                            "Light text is a guide only"
-
-                        else ->
-                            "Draft saves automatically"
-                    },
-                modifier =
-                    Modifier.padding(
-                        start =
-                            SangfroidSpacing.Xs,
-                        end =
-                            SangfroidSpacing.Xl,
-                        bottom =
-                            SangfroidSpacing.Xs
-                    ),
-                style =
-                    MaterialTheme
-                        .typography
-                        .labelSmall,
-                color =
-                    MaterialTheme
-                        .colorScheme
-                        .onSurfaceVariant
-                        .copy(
-                            alpha =
-                                if (
-                                    isProcessing ||
-                                    isGeneratingIdealAnswer
-                                ) {
-                                    0.72f
-                                } else {
-                                    0.58f
-                                }
-                        )
-            )
-        }
-
-        Row(
-            modifier =
                 Modifier
                     .align(
-                        Alignment.BottomEnd
+                        Alignment.BottomCenter
                     )
-                    .padding(
-                        end =
-                            SangfroidSpacing.Xs,
-                        bottom =
-                            SangfroidSpacing.Xs
-                    ),
-            verticalAlignment =
-                Alignment.CenterVertically
+                    .fillMaxWidth()
         ) {
-            /*
-             * Both actions intentionally receive the same outer
-             * Row alignment. Neither child adds its own vertical
-             * padding, which keeps Refresh / Ideal answer and Clear
-             * on exactly the same baseline.
-             */
-            IdealAnswerEditorAction(
+            EditorFooter(
+                message =
+                    footerMessage,
                 hasIdealAnswer =
                     hasIdealAnswer,
-                isGenerating =
+                isGeneratingIdealAnswer =
                     isGeneratingIdealAnswer,
-                enabled =
+                idealAnswerEnabled =
                     idealAnswerEnabled &&
                             !isRecording &&
                             !isProcessing,
-                onGenerate =
-                    onGenerateIdealAnswer,
-                onRefresh =
-                    onRefreshIdealAnswer,
-                modifier =
-                    Modifier.padding(
-                        horizontal =
-                            SangfroidSpacing.Sm,
-                        vertical =
-                            SangfroidSpacing.Xs
-                    )
-            )
-
-            AnimatedVisibility(
-                visible =
+                canClear =
                     canClear,
-                enter =
-                    fadeIn(),
-                exit =
-                    fadeOut()
-            ) {
-                ClearAnswerAction(
-                    onClear = {
-                        onValueChange(
-                            ""
-                        )
-                    },
-                    modifier =
-                        Modifier.padding(
-                            horizontal =
-                                SangfroidSpacing.Sm,
-                            vertical =
-                                SangfroidSpacing.Xs
-                        )
+                onGenerateIdealAnswer =
+                    onGenerateIdealAnswer,
+                onRefreshIdealAnswer =
+                    onRefreshIdealAnswer,
+                onClear = {
+                    onValueChange(
+                        ""
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditorFooter(
+    message: String,
+    hasIdealAnswer: Boolean,
+    isGeneratingIdealAnswer: Boolean,
+    idealAnswerEnabled: Boolean,
+    canClear: Boolean,
+    onGenerateIdealAnswer: () -> Unit,
+    onRefreshIdealAnswer: () -> Unit,
+    onClear: () -> Unit
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(
+                    EditorFooterHeight
                 )
-            }
+                .padding(
+                    horizontal =
+                        SangfroidSpacing.Xs
+                ),
+        verticalAlignment =
+            Alignment.CenterVertically
+    ) {
+        Text(
+            text =
+                message,
+            modifier =
+                Modifier
+                    .weight(
+                        1f
+                    )
+                    .alignBy(
+                        FirstBaseline
+                    ),
+            style =
+                MaterialTheme
+                    .typography
+                    .labelSmall,
+            fontWeight =
+                FontWeight.Normal,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
+                    .copy(
+                        alpha =
+                            if (
+                                isGeneratingIdealAnswer
+                            ) {
+                                0.72f
+                            } else {
+                                0.58f
+                            }
+                    ),
+            maxLines =
+                1
+        )
+
+        IdealAnswerEditorAction(
+            hasIdealAnswer =
+                hasIdealAnswer,
+            isGenerating =
+                isGeneratingIdealAnswer,
+            enabled =
+                idealAnswerEnabled,
+            onGenerate =
+                onGenerateIdealAnswer,
+            onRefresh =
+                onRefreshIdealAnswer,
+            modifier =
+                Modifier.alignBy(
+                    FirstBaseline
+                )
+        )
+
+        AnimatedVisibility(
+            visible =
+                canClear,
+            enter =
+                fadeIn(),
+            exit =
+                fadeOut(),
+            modifier =
+                Modifier.alignBy(
+                    FirstBaseline
+                )
+        ) {
+            ClearAnswerAction(
+                onClear =
+                    onClear
+            )
         }
     }
 }
@@ -491,7 +523,9 @@ private class RemainingGuideTransformation(
             text =
                 transformedText,
             offsetMapping =
-                object : OffsetMapping {
+                object :
+                    OffsetMapping {
+
                     override fun originalToTransformed(
                         offset: Int
                     ): Int {
@@ -737,21 +771,24 @@ private fun appendGuideSeparator(
     }
 
     if (
-        answer.last()
+        answer
+            .last()
             .isWhitespace()
     ) {
         return remaining.trimStart()
     }
 
     if (
-        remaining.first()
+        remaining
+            .first()
             .isWhitespace()
     ) {
         return remaining
     }
 
     return if (
-        remaining.first()
+        remaining
+            .first()
             .isLetterOrDigit()
     ) {
         " $remaining"
@@ -770,7 +807,9 @@ private fun ClearAnswerAction(
             MutableInteractionSource()
         }
 
-    Row(
+    Text(
+        text =
+            "Clear",
         modifier =
             modifier
                 .semantics {
@@ -791,29 +830,28 @@ private fun ClearAnswerAction(
                         "Clear answer",
                     onClick =
                         onClear
+                )
+                .padding(
+                    start =
+                        SangfroidSpacing.Sm
                 ),
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-        Text(
-            text =
-                "Clear",
-            style =
-                MaterialTheme
-                    .typography
-                    .labelSmall,
-            fontWeight =
-                FontWeight.SemiBold,
-            color =
-                MaterialTheme
-                    .colorScheme
-                    .onSurfaceVariant
-                    .copy(
-                        alpha =
-                            0.58f
-                    )
-        )
-    }
+        style =
+            MaterialTheme
+                .typography
+                .labelSmall,
+        fontWeight =
+            FontWeight.Normal,
+        color =
+            MaterialTheme
+                .colorScheme
+                .onSurfaceVariant
+                .copy(
+                    alpha =
+                        0.58f
+                ),
+        maxLines =
+            1
+    )
 }
 
 @Composable
@@ -827,7 +865,9 @@ private fun PracticeAnswerPlaceholder(
     ) {
         Text(
             text =
-                if (isRecording) {
+                if (
+                    isRecording
+                ) {
                     "Listening…"
                 } else {
                     "Start writing your answer…"
