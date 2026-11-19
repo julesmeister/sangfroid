@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -239,6 +240,18 @@ fun PracticeQuestionCard(
         mutableStateOf<String?>(null)
     }
 
+    /*
+     * The folder body's top-right radius adapts to the trailing tab.
+     *
+     * When the last tab's slanted foot reaches into the rounded corner,
+     * the corner squares off underneath it so the foot stays connected
+     * to the body instead of floating over the curve.
+     */
+    var bodyTopEndRadius by
+    remember(question.id) {
+        mutableStateOf(FolderBodyRadius)
+    }
+
     val confirmationAttempt =
         orderedAttempts.firstOrNull {
             it.id == deleteConfirmationId
@@ -402,13 +415,16 @@ fun PracticeQuestionCard(
             onSelectCurrentAttempt =
                 onSelectCurrentAttempt,
             onSelectAttempt =
-                onSelectAttempt
+                onSelectAttempt,
+            onBodyTopEndRadiusChanged = { radius ->
+                bodyTopEndRadius = radius
+            }
         )
 
         val bodyShape =
             RoundedCornerShape(
                 topStart = 0.dp,
-                topEnd = FolderBodyRadius,
+                topEnd = bodyTopEndRadius,
                 bottomStart = FolderBodyRadius,
                 bottomEnd = FolderBodyRadius
             )
@@ -581,7 +597,8 @@ private fun FolderAttemptTabs(
     deletingAttemptIds: Set<String>,
     colors: QuestionCategoryColors,
     onSelectCurrentAttempt: () -> Unit,
-    onSelectAttempt: (String) -> Unit
+    onSelectAttempt: (String) -> Unit,
+    onBodyTopEndRadiusChanged: (Dp) -> Unit
 ) {
     val scrollState =
         rememberScrollState()
@@ -614,6 +631,51 @@ private fun FolderAttemptTabs(
     var viewportWidthPx by
     remember {
         mutableStateOf(0)
+    }
+
+    /*
+     * Distance between the trailing tab's visible right foot and the
+     * viewport's right edge, capped to the body radius.
+     *
+     * - Plenty of room: full 24 dp rounded corner.
+     * - Trailing tab entering the corner: radius shrinks so the flat
+     *   top edge of the body always reaches the foot of the tab.
+     * - Trailing tab at or past the edge: square corner.
+     *
+     * Because this reads scroll position and measured tab edges, the
+     * corner follows scrolling and tab-width animations smoothly.
+     */
+    val trailingCornerRadiusPx by
+    remember(
+        tabRightEdges,
+        scrollState,
+        bodyRadiusPx
+    ) {
+        derivedStateOf {
+            val trailingRight =
+                tabRightEdges.values.maxOrNull()
+
+            if (
+                trailingRight == null ||
+                viewportWidthPx <= 0
+            ) {
+                bodyRadiusPx
+            } else {
+                val visibleRight =
+                    trailingRight - scrollState.value
+
+                (viewportWidthPx - visibleRight)
+                    .coerceIn(0f, bodyRadiusPx)
+            }
+        }
+    }
+
+    LaunchedEffect(trailingCornerRadiusPx) {
+        onBodyTopEndRadiusChanged(
+            with(density) {
+                trailingCornerRadiusPx.toDp()
+            }
+        )
     }
 
     val inactiveTabColor =
@@ -653,8 +715,9 @@ private fun FolderAttemptTabs(
                      * Joins the tab feet to the folder body.
                      *
                      * The strip stops before the last tab's slanted edge
-                     * and never reaches the body's rounded top-right
-                     * corner, so nothing sticks out beyond the card.
+                     * and never reaches the body's (adaptive) rounded
+                     * top-right corner, so nothing sticks out beyond
+                     * the card.
                      */
                     val tabsEnd =
                         tabRightEdges.values.maxOrNull()
@@ -663,7 +726,7 @@ private fun FolderAttemptTabs(
                     val visibleLimit =
                         scrollState.value +
                                 viewportWidthPx -
-                                bodyRadiusPx
+                                trailingCornerRadiusPx
 
                     val stripEnd =
                         min(
