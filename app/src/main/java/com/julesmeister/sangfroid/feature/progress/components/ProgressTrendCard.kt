@@ -37,14 +37,17 @@ import androidx.compose.ui.unit.dp
 import com.julesmeister.sangfroid.core.designsystem.dimensions.SangfroidSpacing
 import com.julesmeister.sangfroid.core.designsystem.theme.FeedbackError
 import com.julesmeister.sangfroid.core.designsystem.theme.FeedbackSuccess
-import com.julesmeister.sangfroid.core.designsystem.theme.SangfroidCyan
 import com.julesmeister.sangfroid.feature.progress.model.OverallProgressSummary
 
 private val CardShape =
-    RoundedCornerShape(28.dp)
+    RoundedCornerShape(
+        28.dp
+    )
 
 private val StripShape =
-    RoundedCornerShape(20.dp)
+    RoundedCornerShape(
+        20.dp
+    )
 
 private val CoverageBarHeight =
     6.dp
@@ -70,29 +73,69 @@ fun ProgressTrendCard(
         summary.savedRevisionCount
 
     val coverage =
-        if (attempts > 0) {
-            (evaluated.toFloat() / attempts.toFloat())
-                .coerceIn(0f, 1f)
+        if (
+            attempts > 0
+        ) {
+            (
+                    evaluated.toFloat() /
+                            attempts.toFloat()
+                    )
+                .coerceIn(
+                    0f,
+                    1f
+                )
         } else {
             0f
         }
 
     val animatedCoverage by
     animateFloatAsState(
-        targetValue = coverage,
-        animationSpec = tween(durationMillis = 700),
-        label = "evaluation-coverage"
+        targetValue =
+            coverage,
+        animationSpec =
+            tween(
+                durationMillis =
+                    700
+            ),
+        label =
+            "evaluation-coverage"
     )
 
+    /*
+     * Match CvInsightsCard:
+     *
+     * outer card:
+     * surfaceVariant @ 55%
+     *
+     * inner metric surface:
+     * solid surface
+     *
+     * main content:
+     * onSurface
+     *
+     * secondary content:
+     * onSurfaceVariant
+     *
+     * progress accent:
+     * primary
+     */
     Surface(
         modifier =
             modifier.fillMaxWidth(),
         shape =
             CardShape,
         color =
-            MaterialTheme.colorScheme.surfaceVariant,
+            MaterialTheme
+                .colorScheme
+                .surfaceVariant
+                .copy(
+                    alpha =
+                        0.55f
+                ),
         contentColor =
-            MaterialTheme.colorScheme.onSurface
+            MaterialTheme
+                .colorScheme
+                .onSurface
     ) {
         Column(
             modifier =
@@ -106,24 +149,35 @@ fun ProgressTrendCard(
         ) {
             CardHeader(
                 change =
-                    summary.averageScoreChangePercentagePoints
+                    summary
+                        .averageScoreChangePercentagePoints
             )
 
             HeroAttempts(
-                attempts = attempts
+                attempts =
+                    attempts
             )
 
             MetricStrip(
-                evaluated = evaluated,
-                revisions = revisions,
+                evaluated =
+                    evaluated,
+                revisions =
+                    revisions,
                 coveragePercent =
-                    (coverage * 100f).toInt()
+                    (
+                            coverage *
+                                    100f
+                            )
+                        .toInt()
             )
 
             CoverageBar(
-                progress = animatedCoverage,
-                evaluated = evaluated,
-                attempts = attempts
+                progress =
+                    animatedCoverage,
+                evaluated =
+                    evaluated,
+                attempts =
+                    attempts
             )
         }
     }
@@ -140,15 +194,31 @@ private fun CardHeader(
             Alignment.CenterVertically
     ) {
         Text(
-            text = "PRACTICE SNAPSHOT",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            text =
+                "PRACTICE SNAPSHOT",
+            modifier =
+                Modifier.weight(
+                    1f
+                ),
+            style =
+                MaterialTheme
+                    .typography
+                    .labelSmall,
+            fontWeight =
+                FontWeight.ExtraBold,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .primary
         )
 
-        if (change != null) {
-            TrendPill(change = change)
+        if (
+            change != null
+        ) {
+            TrendPill(
+                change =
+                    change
+            )
         }
     }
 }
@@ -162,32 +232,57 @@ private fun TrendPill(
 
     val direction =
         when {
-            value > 0.0 -> TrendDirection.UP
-            value < 0.0 -> TrendDirection.DOWN
-            else -> TrendDirection.STABLE
+            value > 0.0 ->
+                TrendDirection.UP
+
+            value < 0.0 ->
+                TrendDirection.DOWN
+
+            else ->
+                TrendDirection.STABLE
         }
 
     val magnitude =
         formatPoints(
-            kotlin.math.abs(value)
+            kotlin.math.abs(
+                value
+            )
         )
 
     val tone =
-        when (direction) {
-            TrendDirection.UP -> FeedbackSuccess
-            TrendDirection.DOWN -> FeedbackError
-            TrendDirection.STABLE -> MaterialTheme.colorScheme.onSurfaceVariant
+        when (
+            direction
+        ) {
+            TrendDirection.UP ->
+                FeedbackSuccess
+
+            TrendDirection.DOWN ->
+                FeedbackError
+
+            TrendDirection.STABLE ->
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
         }
 
     val label =
-        when (direction) {
-            TrendDirection.UP -> "+$magnitude pts"
-            TrendDirection.DOWN -> "−$magnitude pts"
-            TrendDirection.STABLE -> "Stable"
+        when (
+            direction
+        ) {
+            TrendDirection.UP ->
+                "+$magnitude pts"
+
+            TrendDirection.DOWN ->
+                "−$magnitude pts"
+
+            TrendDirection.STABLE ->
+                "Stable"
         }
 
     val description =
-        when (direction) {
+        when (
+            direction
+        ) {
             TrendDirection.UP ->
                 "Recent question scores are up $magnitude percentage points on average."
 
@@ -201,32 +296,58 @@ private fun TrendPill(
     Row(
         modifier =
             Modifier
-                .clip(RoundedCornerShape(50))
-                .background(tone.copy(alpha = 0.14f))
+                .clip(
+                    RoundedCornerShape(
+                        50
+                    )
+                )
+                .background(
+                    tone.copy(
+                        alpha =
+                            0.14f
+                    )
+                )
                 .padding(
-                    horizontal = 10.dp,
-                    vertical = 5.dp
+                    horizontal =
+                        10.dp,
+                    vertical =
+                        5.dp
                 )
                 .semantics {
-                    contentDescription = description
+                    contentDescription =
+                        description
                 },
         horizontalArrangement =
-            Arrangement.spacedBy(6.dp),
+            Arrangement.spacedBy(
+                6.dp
+            ),
         verticalAlignment =
             Alignment.CenterVertically
     ) {
         TrendGlyph(
-            direction = direction,
-            color = tone,
-            modifier = Modifier.size(10.dp)
+            direction =
+                direction,
+            color =
+                tone,
+            modifier =
+                Modifier.size(
+                    10.dp
+                )
         )
 
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = tone,
-            maxLines = 1
+            text =
+                label,
+            style =
+                MaterialTheme
+                    .typography
+                    .labelSmall,
+            fontWeight =
+                FontWeight.Bold,
+            color =
+                tone,
+            maxLines =
+                1
         )
     }
 }
@@ -244,26 +365,48 @@ private fun HeroAttempts(
             )
     ) {
         Text(
-            text = attempts.toString(),
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
+            text =
+                attempts.toString(),
+            style =
+                MaterialTheme
+                    .typography
+                    .displaySmall,
+            fontWeight =
+                FontWeight.ExtraBold,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurface,
+            maxLines =
+                1
         )
 
         Text(
             text =
-                if (attempts == 1) {
+                if (
+                    attempts == 1
+                ) {
                     "attempt so far"
                 } else {
                     "attempts so far"
                 },
             modifier =
-                Modifier.padding(bottom = 6.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+                Modifier.padding(
+                    bottom =
+                        6.dp
+                ),
+            style =
+                MaterialTheme
+                    .typography
+                    .bodyMedium,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant,
+            maxLines =
+                1,
+            overflow =
+                TextOverflow.Ellipsis
         )
     }
 }
@@ -278,34 +421,61 @@ private fun MetricStrip(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clip(StripShape)
-                .background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.62f)
+                .clip(
+                    StripShape
                 )
-                .padding(vertical = SangfroidSpacing.Sm),
+                /*
+                 * CvInsightsCard's StatTile uses the solid
+                 * theme surface rather than a translucent
+                 * surface on top of surfaceVariant.
+                 */
+                .background(
+                    MaterialTheme
+                        .colorScheme
+                        .surface
+                )
+                .padding(
+                    vertical =
+                        SangfroidSpacing.Sm
+                ),
         verticalAlignment =
             Alignment.CenterVertically
     ) {
         Metric(
-            value = evaluated.toString(),
-            label = "Evaluated",
-            modifier = Modifier.weight(1f)
+            value =
+                evaluated.toString(),
+            label =
+                "Evaluated",
+            modifier =
+                Modifier.weight(
+                    1f
+                )
         )
 
         StripDivider()
 
         Metric(
-            value = revisions.toString(),
-            label = "Revisions",
-            modifier = Modifier.weight(1f)
+            value =
+                revisions.toString(),
+            label =
+                "Revisions",
+            modifier =
+                Modifier.weight(
+                    1f
+                )
         )
 
         StripDivider()
 
         Metric(
-            value = "$coveragePercent%",
-            label = "Coverage",
-            modifier = Modifier.weight(1f)
+            value =
+                "$coveragePercent%",
+            label =
+                "Coverage",
+            modifier =
+                Modifier.weight(
+                    1f
+                )
         )
     }
 }
@@ -317,7 +487,8 @@ private fun Metric(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
+        modifier =
+            modifier,
         horizontalAlignment =
             Alignment.CenterHorizontally,
         verticalArrangement =
@@ -326,18 +497,35 @@ private fun Metric(
             )
     ) {
         Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1
+            text =
+                value,
+            style =
+                MaterialTheme
+                    .typography
+                    .titleLarge,
+            fontWeight =
+                FontWeight.ExtraBold,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurface,
+            maxLines =
+                1
         )
 
         Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1
+            text =
+                label,
+            style =
+                MaterialTheme
+                    .typography
+                    .labelSmall,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant,
+            maxLines =
+                1
         )
     }
 }
@@ -347,10 +535,20 @@ private fun StripDivider() {
     Box(
         modifier =
             Modifier
-                .width(1.dp)
-                .height(28.dp)
+                .width(
+                    1.dp
+                )
+                .height(
+                    28.dp
+                )
                 .background(
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                    MaterialTheme
+                        .colorScheme
+                        .outlineVariant
+                        .copy(
+                            alpha =
+                                0.45f
+                        )
                 )
     )
 }
@@ -363,25 +561,50 @@ private fun CoverageBar(
 ) {
     Column(
         verticalArrangement =
-            Arrangement.spacedBy(6.dp)
+            Arrangement.spacedBy(
+                6.dp
+            )
     ) {
         Box(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(CoverageBarHeight)
-                    .clip(CircleShape)
+                    .height(
+                        CoverageBarHeight
+                    )
+                    .clip(
+                        CircleShape
+                    )
+                    /*
+                     * Matches the CV Insights coverage track:
+                     * a clean solid surface sitting on the
+                     * translucent surfaceVariant card.
+                     */
                     .background(
-                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                        MaterialTheme
+                            .colorScheme
+                            .surface
                     )
         ) {
             Box(
                 modifier =
                     Modifier
                         .fillMaxHeight()
-                        .fillMaxWidth(progress)
-                        .clip(CircleShape)
-                        .background(SangfroidCyan)
+                        .fillMaxWidth(
+                            progress
+                        )
+                        .clip(
+                            CircleShape
+                        )
+                        /*
+                         * Match CV Insights exactly here too.
+                         * No dedicated cyan treatment on this card.
+                         */
+                        .background(
+                            MaterialTheme
+                                .colorScheme
+                                .primary
+                        )
             )
         }
 
@@ -397,8 +620,14 @@ private fun CoverageBar(
                     else ->
                         "$evaluated of $attempts attempts have feedback."
                 },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style =
+                MaterialTheme
+                    .typography
+                    .labelSmall,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurfaceVariant
         )
     }
 }
@@ -410,27 +639,123 @@ private fun TrendGlyph(
     modifier: Modifier = Modifier
 ) {
     Canvas(
-        modifier = modifier
+        modifier =
+            modifier
     ) {
-        val stroke = 1.8.dp.toPx()
-        val w = size.width
-        val h = size.height
+        val stroke =
+            1.8.dp.toPx()
 
-        when (direction) {
+        val w =
+            size.width
+
+        val h =
+            size.height
+
+        when (
+            direction
+        ) {
             TrendDirection.UP -> {
-                drawLine(color, Offset(w * 0.5f, h * 0.9f), Offset(w * 0.5f, h * 0.1f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.15f, h * 0.45f), Offset(w * 0.5f, h * 0.1f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.85f, h * 0.45f), Offset(w * 0.5f, h * 0.1f), stroke, StrokeCap.Round)
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.5f,
+                        h * 0.9f
+                    ),
+                    Offset(
+                        w * 0.5f,
+                        h * 0.1f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
+
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.15f,
+                        h * 0.45f
+                    ),
+                    Offset(
+                        w * 0.5f,
+                        h * 0.1f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
+
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.85f,
+                        h * 0.45f
+                    ),
+                    Offset(
+                        w * 0.5f,
+                        h * 0.1f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
             }
 
             TrendDirection.DOWN -> {
-                drawLine(color, Offset(w * 0.5f, h * 0.1f), Offset(w * 0.5f, h * 0.9f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.15f, h * 0.55f), Offset(w * 0.5f, h * 0.9f), stroke, StrokeCap.Round)
-                drawLine(color, Offset(w * 0.85f, h * 0.55f), Offset(w * 0.5f, h * 0.9f), stroke, StrokeCap.Round)
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.5f,
+                        h * 0.1f
+                    ),
+                    Offset(
+                        w * 0.5f,
+                        h * 0.9f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
+
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.15f,
+                        h * 0.55f
+                    ),
+                    Offset(
+                        w * 0.5f,
+                        h * 0.9f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
+
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.85f,
+                        h * 0.55f
+                    ),
+                    Offset(
+                        w * 0.5f,
+                        h * 0.9f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
             }
 
             TrendDirection.STABLE -> {
-                drawLine(color, Offset(w * 0.1f, h * 0.5f), Offset(w * 0.9f, h * 0.5f), stroke, StrokeCap.Round)
+                drawLine(
+                    color,
+                    Offset(
+                        w * 0.1f,
+                        h * 0.5f
+                    ),
+                    Offset(
+                        w * 0.9f,
+                        h * 0.5f
+                    ),
+                    stroke,
+                    StrokeCap.Round
+                )
             }
         }
     }
@@ -439,8 +764,14 @@ private fun TrendGlyph(
 private fun formatPoints(
     value: Double
 ): String {
-    return if (value % 1.0 == 0.0) {
-        value.toLong().toString()
+    return if (
+        value %
+        1.0 ==
+        0.0
+    ) {
+        value
+            .toLong()
+            .toString()
     } else {
         String.format(
             java.util.Locale.ROOT,
