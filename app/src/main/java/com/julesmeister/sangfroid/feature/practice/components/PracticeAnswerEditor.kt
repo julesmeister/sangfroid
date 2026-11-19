@@ -230,20 +230,30 @@ fun PracticeAnswerEditor(
             value =
                 displayedValue,
             onValueChange = { updatedValue ->
+                /*
+                 * Ideal-answer generation does not lock the editor.
+                 *
+                 * The generated response only changes suggestedScript,
+                 * so the user can safely continue typing while waiting.
+                 */
                 if (
                     !isRecording &&
-                    !isProcessing &&
-                    !isGeneratingIdealAnswer
+                    !isProcessing
                 ) {
                     onValueChange(
                         updatedValue
                     )
                 }
             },
+            /*
+             * Do not include isGeneratingIdealAnswer here.
+             *
+             * Setting enabled to false causes Compose to remove focus
+             * from BasicTextField and dismisses or disrupts the keyboard.
+             */
             enabled =
                 !isRecording &&
-                        !isProcessing &&
-                        !isGeneratingIdealAnswer,
+                        !isProcessing,
             interactionSource =
                 interactionSource,
             visualTransformation =
