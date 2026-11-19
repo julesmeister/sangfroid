@@ -43,7 +43,8 @@ fun PracticeScreen(
     revisionRequest: String? = null,
     onRevisionRequestConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
-    viewModel: PracticeViewModel = hiltViewModel()
+    viewModel: PracticeViewModel =
+        hiltViewModel()
 ) {
     val uiState by
     viewModel
@@ -101,12 +102,14 @@ fun PracticeScreen(
             }
         }
 
-    val requestSpeechRecording: () -> Unit = {
+    val requestSpeechRecording:
+                () -> Unit = {
         val hasPermission =
             ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.RECORD_AUDIO
-            ) == PackageManager.PERMISSION_GRANTED
+            ) ==
+                    PackageManager.PERMISSION_GRANTED
 
         if (hasPermission) {
             viewModel.startSpeechRecording()
@@ -140,6 +143,10 @@ fun PracticeScreen(
             viewModel::useAttemptAsNewAnswer,
         onOpenFeedback =
             onOpenFeedback,
+        onShowIdealAnswer =
+            viewModel::showIdealAnswer,
+        onRefreshIdealAnswer =
+            viewModel::refreshIdealAnswer,
         onStartRecording =
             requestSpeechRecording,
         onStopRecording =
@@ -151,7 +158,9 @@ fun PracticeScreen(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalLayoutApi::class
+)
 @Composable
 private fun PracticeContent(
     uiState: PracticeUiState,
@@ -164,6 +173,8 @@ private fun PracticeContent(
     onSelectNextAttempt: () -> Unit,
     onUseAttemptAsNewAnswer: (String) -> Unit,
     onOpenFeedback: (String) -> Unit,
+    onShowIdealAnswer: () -> Unit,
+    onRefreshIdealAnswer: () -> Unit,
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
     onCancelRecording: () -> Unit,
@@ -181,7 +192,9 @@ private fun PracticeContent(
 
     var isEditorFocused by
     remember {
-        mutableStateOf(false)
+        mutableStateOf(
+            false
+        )
     }
 
     val isEditing =
@@ -197,9 +210,11 @@ private fun PracticeContent(
                 isVoiceActive ||
                 uiState.isViewingHistoricalAttempt
 
-    val dismissEditor: () -> Unit = {
+    val dismissEditor:
+                () -> Unit = {
         focusManager.clearFocus(
-            force = true
+            force =
+                true
         )
 
         keyboardController?.hide()
@@ -208,21 +223,28 @@ private fun PracticeContent(
             false
     }
 
-    val selectCurrentAttempt: () -> Unit = {
+    val selectCurrentAttempt:
+                () -> Unit = {
         dismissEditor()
+
         onSelectCurrentAttempt()
     }
 
     val selectHistoricalAttempt:
                 (String) -> Unit = { attemptId ->
         dismissEditor()
-        onSelectAttempt(attemptId)
+
+        onSelectAttempt(
+            attemptId
+        )
     }
 
-    val handleBack: () -> Unit = {
+    val handleBack:
+                () -> Unit = {
         when {
             speechUiState.isRecording -> {
                 onCancelRecording()
+
                 dismissEditor()
             }
 
@@ -291,15 +313,15 @@ private fun PracticeContent(
                             selectHistoricalAttempt,
                         onSelectPreviousAttempt = {
                             dismissEditor()
+
                             onSelectPreviousAttempt()
                         },
                         onSelectNextAttempt = {
                             dismissEditor()
+
                             onSelectNextAttempt()
                         },
-                        onUseAttemptAsNewAnswer = {
-                                attemptId ->
-
+                        onUseAttemptAsNewAnswer = { attemptId ->
                             dismissEditor()
 
                             onUseAttemptAsNewAnswer(
@@ -308,11 +330,20 @@ private fun PracticeContent(
                         },
                         onOpenFeedback = { attemptId ->
                             dismissEditor()
-                            onOpenFeedback(attemptId)
+
+                            onOpenFeedback(
+                                attemptId
+                            )
                         },
                         onEditorFocusChanged = { focused ->
                             isEditorFocused =
                                 focused
+                        },
+                        onShowIdealAnswer = {
+                            onShowIdealAnswer()
+                        },
+                        onRefreshIdealAnswer = {
+                            onRefreshIdealAnswer()
                         },
                         compact =
                             isEditing ||
@@ -320,7 +351,9 @@ private fun PracticeContent(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .weight(1f)
+                                .weight(
+                                    1f
+                                )
                     )
 
                     PracticeBottomDock(
@@ -330,16 +363,19 @@ private fun PracticeContent(
                             speechUiState,
                         onStartRecording = {
                             dismissEditor()
+
                             onStartRecording()
                         },
                         onStopRecording =
                             onStopRecording,
                         onCancelRecording = {
                             onCancelRecording()
+
                             dismissEditor()
                         },
                         onSubmit = {
                             dismissEditor()
+
                             onSubmit()
                         },
                         modifier =

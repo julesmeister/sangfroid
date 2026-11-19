@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,15 +15,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.julesmeister.sangfroid.core.designsystem.dimensions.SangfroidSpacing
 import com.julesmeister.sangfroid.core.designsystem.layout.SangfroidScreen
+import com.julesmeister.sangfroid.domain.model.QuestionCategory
+import com.julesmeister.sangfroid.feature.feed.filter.CategoryFilterDialog
+import com.julesmeister.sangfroid.feature.saved.components.SavedCategoryFilterButton
 import com.julesmeister.sangfroid.feature.saved.components.SavedQuestionCard
 import com.julesmeister.sangfroid.feature.saved.components.SavedQuestionsEmptyState
+import com.julesmeister.sangfroid.feature.saved.components.SavedQuestionsFilteredEmptyState
 import com.julesmeister.sangfroid.feature.saved.components.SavedQuestionsHeader
 
 @Composable
@@ -39,6 +49,69 @@ fun SavedQuestionsScreen(
         .uiState
         .collectAsStateWithLifecycle()
 
+    var categoryFilterVisible by
+    rememberSaveable {
+        mutableStateOf(
+            false
+        )
+    }
+
+    var selectedCategoryNames by
+    rememberSaveable {
+        mutableStateOf(
+            emptyList<String>()
+        )
+    }
+
+    val availableCategories:
+            Set<QuestionCategory> =
+        remember(
+            uiState.questions
+        ) {
+            uiState.questions
+                .map { item ->
+                    item.question.category
+                }
+                .toSet()
+        }
+
+    val selectedCategories:
+            Set<QuestionCategory> =
+        remember(
+            availableCategories,
+            selectedCategoryNames
+        ) {
+            availableCategories
+                .filterTo(
+                    linkedSetOf()
+                ) { category ->
+                    category.name in
+                            selectedCategoryNames
+                }
+        }
+
+    val filteredQuestions =
+        remember(
+            uiState.questions,
+            selectedCategories
+        ) {
+            if (
+                selectedCategories.isEmpty()
+            ) {
+                uiState.questions
+            } else {
+                uiState.questions
+                    .filter { item ->
+                        item.question.category in
+                                selectedCategories
+                    }
+            }
+        }
+
+    val filteringEnabled =
+        !uiState.isLoading &&
+                uiState.questions.isNotEmpty()
+
     SangfroidScreen(
         modifier =
             modifier,
@@ -54,14 +127,51 @@ fun SavedQuestionsScreen(
                 onNavigateBack,
             modifier =
                 Modifier.padding(
-                    horizontal =
+                    start =
                         SangfroidSpacing
                             .ScreenHorizontal,
-                    vertical =
+                    end =
                         SangfroidSpacing
-                            .ScreenVertical
+                            .ScreenHorizontal,
+                    top =
+                        SangfroidSpacing
+                            .ScreenVertical,
+                    bottom =
+                        SangfroidSpacing.Xs
                 )
         )
+
+        if (
+            filteringEnabled
+        ) {
+            SavedCategoryFilterButton(
+                activeFilterCount =
+                    selectedCategories.size,
+                visibleQuestionCount =
+                    filteredQuestions.size,
+                totalQuestionCount =
+                    uiState.questions.size,
+                enabled =
+                    true,
+                onClick = {
+                    categoryFilterVisible =
+                        true
+                },
+                modifier =
+                    Modifier.padding(
+                        horizontal =
+                            SangfroidSpacing
+                                .ScreenHorizontal
+                    )
+            )
+
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        SangfroidSpacing.Sm
+                    )
+            )
+        }
 
         when {
             uiState.isLoading -> {
@@ -110,6 +220,22 @@ fun SavedQuestionsScreen(
                 )
             }
 
+            filteredQuestions.isEmpty() &&
+                    selectedCategories.isNotEmpty() -> {
+                SavedQuestionsFilteredEmptyState(
+                    selectedCategoryCount =
+                        selectedCategories.size,
+                    onClearFilters = {
+                        selectedCategoryNames =
+                            emptyList()
+                    },
+                    modifier =
+                        Modifier.weight(
+                            1f
+                        )
+                )
+            }
+
             else -> {
                 LazyColumn(
                     modifier =
@@ -154,7 +280,7 @@ fun SavedQuestionsScreen(
 
                     items(
                         items =
-                            uiState.questions,
+                            filteredQuestions,
                         key = { item ->
                             item.id
                         }
@@ -190,6 +316,29 @@ fun SavedQuestionsScreen(
             }
         }
     }
+
+    CategoryFilterDialog(
+        visible =
+            categoryFilterVisible,
+        availableCategories =
+            availableCategories,
+        selectedCategories =
+            selectedCategories,
+        onApply = { categories ->
+            selectedCategoryNames =
+                categories
+                    .map { category ->
+                        category.name
+                    }
+
+            categoryFilterVisible =
+                false
+        },
+        onDismiss = {
+            categoryFilterVisible =
+                false
+        }
+    )
 }
 
 @Composable
@@ -201,14 +350,25 @@ private fun SavedMessage(
 ) {
     Column(
         modifier =
-            modifier.fillMaxSize(),
+            modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal =
+                        SangfroidSpacing
+                            .ScreenHorizontal
+                ),
         horizontalAlignment =
             Alignment.CenterHorizontally,
         verticalArrangement =
             Arrangement.Center
     ) {
         if (showProgress) {
-            CircularProgressIndicator()
+            CircularProgressIndicator(
+                color =
+                    MaterialTheme
+                        .colorScheme
+                        .onSurface
+            )
 
             Spacer(
                 modifier =
@@ -226,7 +386,13 @@ private fun SavedMessage(
                     .typography
                     .titleLarge,
             fontWeight =
-                FontWeight.Bold
+                FontWeight.Bold,
+            color =
+                MaterialTheme
+                    .colorScheme
+                    .onSurface,
+            textAlign =
+                TextAlign.Center
         )
 
         Spacer(
@@ -246,7 +412,9 @@ private fun SavedMessage(
             color =
                 MaterialTheme
                     .colorScheme
-                    .onSurfaceVariant
+                    .onSurfaceVariant,
+            textAlign =
+                TextAlign.Center
         )
     }
 }

@@ -4,6 +4,8 @@ import com.julesmeister.sangfroid.data.remote.dto.CvAnalysisRequestDto
 import com.julesmeister.sangfroid.data.remote.dto.CvAnalysisResponseDto
 import com.julesmeister.sangfroid.data.remote.dto.EvaluationRequestDto
 import com.julesmeister.sangfroid.data.remote.dto.EvaluationResponseDto
+import com.julesmeister.sangfroid.data.remote.dto.IdealAnswerRequestDto
+import com.julesmeister.sangfroid.data.remote.dto.IdealAnswerResponseDto
 import com.julesmeister.sangfroid.data.remote.dto.QuestionGenerationRequestDto
 import com.julesmeister.sangfroid.data.remote.dto.QuestionGenerationResponseDto
 import com.julesmeister.sangfroid.data.remote.dto.QuestionImportRequestDto
@@ -22,6 +24,10 @@ interface SangfroidApi {
     suspend fun importQuestions(
         request: QuestionImportRequestDto
     ): Result<QuestionImportResponseDto>
+
+    suspend fun generateIdealAnswer(
+        request: IdealAnswerRequestDto
+    ): Result<IdealAnswerResponseDto>
 
     suspend fun analyzeCv(
         request: CvAnalysisRequestDto

@@ -1,5 +1,3 @@
-// app/src/main/java/com/julesmeister/sangfroid/feature/practice/PracticeViewModel.kt
-
 package com.julesmeister.sangfroid.feature.practice
 
 import androidx.lifecycle.SavedStateHandle
@@ -10,6 +8,7 @@ import com.julesmeister.sangfroid.data.local.entity.PracticeAttemptEntity
 import com.julesmeister.sangfroid.data.local.entity.QuestionEntity
 import com.julesmeister.sangfroid.domain.model.AnswerInputMethod
 import com.julesmeister.sangfroid.domain.model.EvaluationStatus
+import com.julesmeister.sangfroid.domain.repository.IdealAnswerRepository
 import com.julesmeister.sangfroid.domain.repository.PracticeRepository
 import com.julesmeister.sangfroid.feature.practice.speech.AnswerSpeechMerger
 import com.julesmeister.sangfroid.feature.practice.speech.PracticeSpeechController
@@ -33,16 +32,23 @@ private const val DraftSaveDelayMillis =
 
 @HiltViewModel
 class PracticeViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
-    private val practiceRepository: PracticeRepository,
-    private val speechController: PracticeSpeechController,
-    private val answerSpeechMerger: AnswerSpeechMerger
+    private val savedStateHandle:
+    SavedStateHandle,
+    private val practiceRepository:
+    PracticeRepository,
+    private val idealAnswerRepository:
+    IdealAnswerRepository,
+    private val speechController:
+    PracticeSpeechController,
+    private val answerSpeechMerger:
+    AnswerSpeechMerger
 ) : ViewModel() {
 
     private val questionId: String =
         checkNotNull(
             savedStateHandle[
-                SangfroidDestination.PracticeArgument
+                SangfroidDestination
+                    .PracticeArgument
             ]
         )
 
@@ -65,7 +71,9 @@ class PracticeViewModel @Inject constructor(
         )
 
     private val answerText =
-        MutableStateFlow("")
+        MutableStateFlow(
+            ""
+        )
 
     private val inputMethod =
         MutableStateFlow(
@@ -78,30 +86,66 @@ class PracticeViewModel @Inject constructor(
         )
 
     private val isDraftSaved =
-        MutableStateFlow(true)
+        MutableStateFlow(
+            true
+        )
 
     private val isSubmitting =
-        MutableStateFlow(false)
+        MutableStateFlow(
+            false
+        )
 
     private val submittedAttemptId =
-        MutableStateFlow<String?>(null)
+        MutableStateFlow<String?>(
+            null
+        )
 
     private val pendingNavigationAttemptId =
-        MutableStateFlow<String?>(null)
+        MutableStateFlow<String?>(
+            null
+        )
+
+    private val idealAnswer =
+        MutableStateFlow<
+                IdealAnswerRepository.IdealAnswer?
+                >(
+            null
+        )
+
+    private val isGeneratingIdealAnswer =
+        MutableStateFlow(
+            false
+        )
+
+    private val idealAnswerErrorMessage =
+        MutableStateFlow<String?>(
+            null
+        )
 
     private val errorMessage =
-        MutableStateFlow<String?>(null)
+        MutableStateFlow<String?>(
+            null
+        )
 
     private val hasSpeechContent =
-        MutableStateFlow(false)
+        MutableStateFlow(
+            false
+        )
 
-    private var draftSaveJob: Job? =
+    private var draftSaveJob:
+            Job? =
         null
 
-    private var draftRestoreJob: Job? =
+    private var draftRestoreJob:
+            Job? =
         null
 
-    private var submissionJob: Job? =
+    private var submissionJob:
+            Job? =
+        null
+
+    private var idealAnswerJob:
+            Job? =
         null
 
     private var answerBeforeSpeech =
@@ -119,7 +163,8 @@ class PracticeViewModel @Inject constructor(
     private var hasInitializedComposer =
         false
 
-    val speechUiState: StateFlow<SpeechUiState>
+    val speechUiState:
+            StateFlow<SpeechUiState>
         get() =
             speechController.uiState
 
@@ -144,11 +189,16 @@ class PracticeViewModel @Inject constructor(
                 method ->
 
             BasePracticeState(
-                question = question,
-                draft = draft,
-                attempts = attempts,
-                currentAnswer = currentAnswer,
-                inputMethod = method
+                question =
+                    question,
+                draft =
+                    draft,
+                attempts =
+                    attempts,
+                currentAnswer =
+                    currentAnswer,
+                inputMethod =
+                    method
             )
         }
 
@@ -167,40 +217,94 @@ class PracticeViewModel @Inject constructor(
                 error ->
 
             ProcessingState(
-                isDraftSaved = draftSaved,
-                isSubmitting = submitting,
-                submittedAttemptId = submittedId,
+                isDraftSaved =
+                    draftSaved,
+                isSubmitting =
+                    submitting,
+                submittedAttemptId =
+                    submittedId,
                 pendingNavigationAttemptId =
                     pendingNavigationId,
-                errorMessage = error
+                errorMessage =
+                    error
             )
         }
 
-    val uiState: StateFlow<PracticeUiState> =
+    private val idealAnswerState =
         combine(
-            baseState,
-            processingState,
+            idealAnswer,
+            isGeneratingIdealAnswer,
+            idealAnswerErrorMessage
+        ) {
+                currentIdealAnswer,
+                generating,
+                idealError ->
+
+            IdealAnswerState(
+                idealAnswer =
+                    currentIdealAnswer,
+                isGenerating =
+                    generating,
+                errorMessage =
+                    idealError
+            )
+        }
+
+    /*
+     * Keep the final uiState combine typed.
+     *
+     * Kotlin Flow only provides strongly typed combine overloads
+     * up to five flows. Combining six directly selects the vararg
+     * Array<Any?> overload.
+     */
+    private val composerState =
+        combine(
             startedAt,
             selectedAttemptId,
             suggestedScript
         ) {
-                base,
-                processing,
                 currentStartedAt,
                 requestedSelectedAttemptId,
                 currentSuggestedScript ->
 
+            ComposerState(
+                startedAt =
+                    currentStartedAt,
+                selectedAttemptId =
+                    requestedSelectedAttemptId,
+                suggestedScript =
+                    currentSuggestedScript
+            )
+        }
+
+    val uiState:
+            StateFlow<PracticeUiState> =
+        combine(
+            baseState,
+            processingState,
+            idealAnswerState,
+            composerState
+        ) {
+                base,
+                processing,
+                ideal,
+                composer ->
+
             val validSelectedAttemptId =
-                requestedSelectedAttemptId
+                composer
+                    .selectedAttemptId
                     ?.takeIf { attemptId ->
                         base.attempts.any { attempt ->
-                            attempt.id == attemptId
+                            attempt.id ==
+                                    attemptId
                         }
                     }
 
             if (
-                requestedSelectedAttemptId != null &&
-                validSelectedAttemptId == null
+                composer.selectedAttemptId !=
+                null &&
+                validSelectedAttemptId ==
+                null
             ) {
                 savedStateHandle[
                     SangfroidDestination
@@ -210,20 +314,22 @@ class PracticeViewModel @Inject constructor(
 
             PracticeUiState(
                 isLoading =
-                    base.question == null,
+                    base.question ==
+                            null,
                 question =
                     base.question,
                 answerText =
                     base.currentAnswer,
                 suggestedScript =
-                    currentSuggestedScript
+                    composer
+                        .suggestedScript
                         ?.takeIf(
                             String::isNotBlank
                         ),
                 inputMethod =
                     base.inputMethod,
                 startedAt =
-                    currentStartedAt,
+                    composer.startedAt,
                 attempts =
                     base.attempts,
                 selectedAttemptId =
@@ -237,20 +343,28 @@ class PracticeViewModel @Inject constructor(
                 pendingNavigationAttemptId =
                     processing
                         .pendingNavigationAttemptId,
+                idealAnswer =
+                    ideal.idealAnswer,
+                isGeneratingIdealAnswer =
+                    ideal.isGenerating,
+                idealAnswerErrorMessage =
+                    ideal.errorMessage,
                 errorMessage =
                     processing.errorMessage
             )
-        }.stateIn(
-            scope =
-                viewModelScope,
-            started =
-                SharingStarted.WhileSubscribed(
-                    stopTimeoutMillis =
-                        5_000L
-                ),
-            initialValue =
-                PracticeUiState()
-        )
+        }
+            .stateIn(
+                scope =
+                    viewModelScope,
+                started =
+                    SharingStarted
+                        .WhileSubscribed(
+                            stopTimeoutMillis =
+                                5_000L
+                        ),
+                initialValue =
+                    PracticeUiState()
+            )
 
     init {
         speechController.bind(
@@ -263,6 +377,125 @@ class PracticeViewModel @Inject constructor(
         restoreDraft()
     }
 
+    fun showIdealAnswer() {
+        generateIdealAnswer(
+            refresh =
+                false
+        )
+    }
+
+    fun refreshIdealAnswer() {
+        generateIdealAnswer(
+            refresh =
+                true
+        )
+    }
+
+    fun dismissIdealAnswerError() {
+        idealAnswerErrorMessage.value =
+            null
+    }
+
+    private fun generateIdealAnswer(
+        refresh: Boolean
+    ) {
+        if (
+            isInteractionLocked() ||
+            idealAnswerJob?.isActive ==
+            true
+        ) {
+            return
+        }
+
+        val question =
+            uiState
+                .value
+                .question
+                ?: return
+
+        val previous =
+            if (refresh) {
+                idealAnswer.value
+            } else {
+                null
+            }
+
+        if (
+            refresh &&
+            previous ==
+            null
+        ) {
+            return
+        }
+
+        val nextRevision =
+            previous
+                ?.revisionNumber
+                ?.plus(
+                    1
+                )
+                ?: 1
+
+        isGeneratingIdealAnswer.value =
+            true
+
+        idealAnswerErrorMessage.value =
+            null
+
+        idealAnswerJob =
+            viewModelScope.launch {
+                try {
+                    val result =
+                        idealAnswerRepository
+                            .generate(
+                                question =
+                                    question,
+                                revisionNumber =
+                                    nextRevision,
+                                previousIdealAnswer =
+                                    previous
+                                        ?.content,
+                                targetRole =
+                                    null,
+                                experienceLevel =
+                                    null,
+                                languageTag =
+                                    DEFAULT_LANGUAGE_TAG,
+                                cvEvidence =
+                                    emptyList()
+                            )
+                            .getOrThrow()
+
+                    idealAnswer.value =
+                        result
+
+                    savedStateHandle[
+                        SangfroidDestination
+                            .PracticeSuggestedScriptKey
+                    ] = result.content
+                } catch (
+                    cancellation:
+                    CancellationException
+                ) {
+                    throw cancellation
+                } catch (
+                    throwable:
+                    Throwable
+                ) {
+                    idealAnswerErrorMessage.value =
+                        throwable
+                            .message
+                            ?.takeIf(
+                                String::isNotBlank
+                            )
+                            ?: "The ideal answer could not be generated."
+                } finally {
+                    isGeneratingIdealAnswer.value =
+                        false
+                }
+            }
+    }
+
     fun useRevisionAsGuide(
         script: String
     ) {
@@ -271,22 +504,30 @@ class PracticeViewModel @Inject constructor(
                 script
             )
 
-        if (normalizedScript.isBlank()) {
+        if (
+            normalizedScript.isBlank()
+        ) {
             return
         }
 
         draftSaveJob?.cancel()
+
         draftSaveJob =
             null
 
         if (
-            speechUiState.value.isRecording ||
-            speechUiState.value.isProcessing
+            speechUiState
+                .value
+                .isRecording ||
+            speechUiState
+                .value
+                .isProcessing
         ) {
             speechController.cancelRecording()
         }
 
         speechController.clearTranscript()
+
         clearSpeechSession()
 
         savedStateHandle[
@@ -354,7 +595,9 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun selectCurrentAttempt() {
-        if (isInteractionLocked()) {
+        if (
+            isInteractionLocked()
+        ) {
             return
         }
 
@@ -367,23 +610,33 @@ class PracticeViewModel @Inject constructor(
     fun selectAttempt(
         attemptId: String
     ) {
-        if (isInteractionLocked()) {
+        if (
+            isInteractionLocked()
+        ) {
             return
         }
 
         val normalizedAttemptId =
             attemptId.trim()
 
-        if (normalizedAttemptId.isBlank()) {
+        if (
+            normalizedAttemptId.isBlank()
+        ) {
             return
         }
 
         val attemptExists =
-            uiState.value.attempts.any { attempt ->
-                attempt.id == normalizedAttemptId
-            }
+            uiState
+                .value
+                .attempts
+                .any { attempt ->
+                    attempt.id ==
+                            normalizedAttemptId
+                }
 
-        if (!attemptExists) {
+        if (
+            !attemptExists
+        ) {
             return
         }
 
@@ -394,7 +647,9 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun selectPreviousAttempt() {
-        if (isInteractionLocked()) {
+        if (
+            isInteractionLocked()
+        ) {
             return
         }
 
@@ -402,20 +657,27 @@ class PracticeViewModel @Inject constructor(
             uiState.value
 
         val orderedAttempts =
-            state.attempts.sortedByDescending {
-                it.submittedAt
-            }
+            state
+                .attempts
+                .sortedByDescending {
+                    it.submittedAt
+                }
 
         val currentAttemptId =
             state.selectedAttemptId
                 ?: return
 
         val currentIndex =
-            orderedAttempts.indexOfFirst {
-                it.id == currentAttemptId
-            }
+            orderedAttempts
+                .indexOfFirst {
+                    it.id ==
+                            currentAttemptId
+                }
 
-        if (currentIndex <= 0) {
+        if (
+            currentIndex <=
+            0
+        ) {
             selectCurrentAttempt()
         } else {
             selectAttempt(
@@ -427,7 +689,9 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun selectNextAttempt() {
-        if (isInteractionLocked()) {
+        if (
+            isInteractionLocked()
+        ) {
             return
         }
 
@@ -435,33 +699,46 @@ class PracticeViewModel @Inject constructor(
             uiState.value
 
         val orderedAttempts =
-            state.attempts.sortedByDescending {
-                it.submittedAt
-            }
+            state
+                .attempts
+                .sortedByDescending {
+                    it.submittedAt
+                }
 
-        if (orderedAttempts.isEmpty()) {
+        if (
+            orderedAttempts.isEmpty()
+        ) {
             return
         }
 
         val currentAttemptId =
             state.selectedAttemptId
 
-        if (currentAttemptId == null) {
+        if (
+            currentAttemptId ==
+            null
+        ) {
             selectAttempt(
-                orderedAttempts.first().id
+                orderedAttempts
+                    .first()
+                    .id
             )
 
             return
         }
 
         val currentIndex =
-            orderedAttempts.indexOfFirst {
-                it.id == currentAttemptId
-            }
+            orderedAttempts
+                .indexOfFirst {
+                    it.id ==
+                            currentAttemptId
+                }
 
         if (
-            currentIndex >= 0 &&
-            currentIndex < orderedAttempts.lastIndex
+            currentIndex >=
+            0 &&
+            currentIndex <
+            orderedAttempts.lastIndex
         ) {
             selectAttempt(
                 orderedAttempts[
@@ -474,14 +751,19 @@ class PracticeViewModel @Inject constructor(
     fun useAttemptAsNewAnswer(
         attemptId: String
     ) {
-        if (isInteractionLocked()) {
+        if (
+            isInteractionLocked()
+        ) {
             return
         }
 
         val attempt =
-            uiState.value.attempts
+            uiState
+                .value
+                .attempts
                 .firstOrNull {
-                    it.id == attemptId
+                    it.id ==
+                            attemptId
                 }
                 ?: return
 
@@ -512,8 +794,12 @@ class PracticeViewModel @Inject constructor(
 
     fun clearSuggestedScript() {
         if (
-            speechUiState.value.isRecording ||
-            speechUiState.value.isProcessing
+            speechUiState
+                .value
+                .isRecording ||
+            speechUiState
+                .value
+                .isProcessing
         ) {
             return
         }
@@ -528,9 +814,15 @@ class PracticeViewModel @Inject constructor(
         value: String
     ) {
         if (
-            uiState.value.isViewingHistoricalAttempt ||
-            speechUiState.value.isRecording ||
-            speechUiState.value.isProcessing ||
+            uiState
+                .value
+                .isViewingHistoricalAttempt ||
+            speechUiState
+                .value
+                .isRecording ||
+            speechUiState
+                .value
+                .isProcessing ||
             isSubmitting.value
         ) {
             return
@@ -545,7 +837,10 @@ class PracticeViewModel @Inject constructor(
         hasInitializedComposer =
             true
 
-        if (value != previousAnswer) {
+        if (
+            value !=
+            previousAnswer
+        ) {
             inputMethod.value =
                 when {
                     value.isBlank() -> {
@@ -580,10 +875,17 @@ class PracticeViewModel @Inject constructor(
 
     fun startSpeechRecording() {
         if (
-            uiState.value.isViewingHistoricalAttempt ||
+            uiState
+                .value
+                .isViewingHistoricalAttempt ||
             isSubmitting.value ||
-            speechUiState.value.isRecording ||
-            speechUiState.value.isProcessing ||
+            isGeneratingIdealAnswer.value ||
+            speechUiState
+                .value
+                .isRecording ||
+            speechUiState
+                .value
+                .isProcessing ||
             isSpeechSessionActive
         ) {
             return
@@ -618,9 +920,13 @@ class PracticeViewModel @Inject constructor(
 
     fun stopSpeechRecording() {
         if (
-            uiState.value.isViewingHistoricalAttempt ||
+            uiState
+                .value
+                .isViewingHistoricalAttempt ||
             !isSpeechSessionActive ||
-            !speechUiState.value.isRecording
+            !speechUiState
+                .value
+                .isRecording
         ) {
             return
         }
@@ -635,6 +941,7 @@ class PracticeViewModel @Inject constructor(
         speechController.cancelRecording()
 
         restorePreSpeechState()
+
         clearSpeechSession()
     }
 
@@ -644,25 +951,36 @@ class PracticeViewModel @Inject constructor(
 
     fun submitAnswer() {
         if (
-            uiState.value.isViewingHistoricalAttempt ||
-            submissionJob?.isActive == true
+            uiState
+                .value
+                .isViewingHistoricalAttempt ||
+            submissionJob?.isActive ==
+            true ||
+            isGeneratingIdealAnswer.value
         ) {
             return
         }
 
         val text =
-            answerText.value.trim()
+            answerText
+                .value
+                .trim()
 
         if (
             text.isBlank() ||
             isSubmitting.value ||
-            speechUiState.value.isRecording ||
-            speechUiState.value.isProcessing
+            speechUiState
+                .value
+                .isRecording ||
+            speechUiState
+                .value
+                .isProcessing
         ) {
             return
         }
 
         draftSaveJob?.cancel()
+
         draftSaveJob =
             null
 
@@ -679,9 +997,11 @@ class PracticeViewModel @Inject constructor(
                         System.currentTimeMillis()
 
                     val normalizedStartedAt =
-                        startedAt.value.coerceAtMost(
-                            submittedAt
-                        )
+                        startedAt
+                            .value
+                            .coerceAtMost(
+                                submittedAt
+                            )
 
                     val durationSeconds =
                         (
@@ -695,7 +1015,8 @@ class PracticeViewModel @Inject constructor(
                                 minimumValue =
                                     0L,
                                 maximumValue =
-                                    Int.MAX_VALUE.toLong()
+                                    Int.MAX_VALUE
+                                        .toLong()
                             )
                             .toInt()
 
@@ -729,14 +1050,16 @@ class PracticeViewModel @Inject constructor(
                                 null
                         )
 
-                    practiceRepository.submitAttempt(
-                        attempt
-                    )
+                    practiceRepository
+                        .submitAttempt(
+                            attempt
+                        )
 
                     runCatching {
-                        practiceRepository.deleteDraft(
-                            questionId
-                        )
+                        practiceRepository
+                            .deleteDraft(
+                                questionId
+                            )
                     }
 
                     submittedAttemptId.value =
@@ -774,6 +1097,9 @@ class PracticeViewModel @Inject constructor(
         errorMessage.value =
             null
 
+        idealAnswerErrorMessage.value =
+            null
+
         speechController.dismissError()
     }
 
@@ -788,14 +1114,23 @@ class PracticeViewModel @Inject constructor(
                     )
                     .collect { draft ->
                         if (
-                            draft == null ||
+                            draft ==
+                            null ||
                             hasInitializedComposer ||
-                            answerText.value.isNotBlank() ||
-                            suggestedScript.value
-                                ?.isNotBlank() == true ||
+                            answerText
+                                .value
+                                .isNotBlank() ||
+                            suggestedScript
+                                .value
+                                ?.isNotBlank() ==
+                            true ||
                             isSpeechSessionActive ||
-                            speechUiState.value.isRecording ||
-                            speechUiState.value.isProcessing
+                            speechUiState
+                                .value
+                                .isRecording ||
+                            speechUiState
+                                .value
+                                .isProcessing
                         ) {
                             return@collect
                         }
@@ -827,7 +1162,9 @@ class PracticeViewModel @Inject constructor(
     ) {
         if (
             !isSpeechSessionActive ||
-            uiState.value.isViewingHistoricalAttempt
+            uiState
+                .value
+                .isViewingHistoricalAttempt
         ) {
             return
         }
@@ -837,8 +1174,11 @@ class PracticeViewModel @Inject constructor(
                 transcript
             )
 
-        if (cleanTranscript.isBlank()) {
+        if (
+            cleanTranscript.isBlank()
+        ) {
             restorePreSpeechState()
+
             clearSpeechSession()
 
             return
@@ -855,8 +1195,11 @@ class PracticeViewModel @Inject constructor(
                     cleanTranscript
             )
 
-        if (mergedAnswer.isBlank()) {
+        if (
+            mergedAnswer.isBlank()
+        ) {
             restorePreSpeechState()
+
             clearSpeechSession()
 
             return
@@ -869,7 +1212,9 @@ class PracticeViewModel @Inject constructor(
             true
 
         inputMethod.value =
-            if (baseAnswer.isNotBlank()) {
+            if (
+                baseAnswer.isNotBlank()
+            ) {
                 AnswerInputMethod.MIXED
             } else {
                 AnswerInputMethod.SPEECH
@@ -891,11 +1236,14 @@ class PracticeViewModel @Inject constructor(
             false
 
         clearSpeechSession()
+
         scheduleDraftSave()
     }
 
     private fun restorePreSpeechState() {
-        if (!isSpeechSessionActive) {
+        if (
+            !isSpeechSessionActive
+        ) {
             return
         }
 
@@ -936,10 +1284,13 @@ class PracticeViewModel @Inject constructor(
                     answerText.value
 
                 try {
-                    if (text.isBlank()) {
-                        practiceRepository.deleteDraft(
-                            questionId
-                        )
+                    if (
+                        text.isBlank()
+                    ) {
+                        practiceRepository
+                            .deleteDraft(
+                                questionId
+                            )
 
                         isDraftSaved.value =
                             true
@@ -987,10 +1338,12 @@ class PracticeViewModel @Inject constructor(
 
     private fun prepareComposerForNewSession() {
         draftSaveJob?.cancel()
+
         draftSaveJob =
             null
 
         speechController.clearTranscript()
+
         clearSpeechSession()
 
         startedAt.value =
@@ -1013,6 +1366,7 @@ class PracticeViewModel @Inject constructor(
 
     private fun resetComposer() {
         draftSaveJob?.cancel()
+
         draftSaveJob =
             null
 
@@ -1045,13 +1399,20 @@ class PracticeViewModel @Inject constructor(
         ] = null
 
         clearSpeechSession()
+
         speechController.clearTranscript()
     }
 
-    private fun isInteractionLocked(): Boolean {
-        return speechUiState.value.isRecording ||
-                speechUiState.value.isProcessing ||
-                isSubmitting.value
+    private fun isInteractionLocked():
+            Boolean {
+        return speechUiState
+            .value
+            .isRecording ||
+                speechUiState
+                    .value
+                    .isProcessing ||
+                isSubmitting.value ||
+                isGeneratingIdealAnswer.value
     }
 
     private fun normalizeScript(
@@ -1099,12 +1460,20 @@ class PracticeViewModel @Inject constructor(
 
     override fun onCleared() {
         draftSaveJob?.cancel()
+
         draftRestoreJob?.cancel()
+
         submissionJob?.cancel()
 
+        idealAnswerJob?.cancel()
+
         if (
-            speechUiState.value.isRecording ||
-            speechUiState.value.isProcessing
+            speechUiState
+                .value
+                .isRecording ||
+            speechUiState
+                .value
+                .isProcessing
         ) {
             speechController.cancelRecording()
         }
@@ -1115,18 +1484,51 @@ class PracticeViewModel @Inject constructor(
     }
 
     private data class BasePracticeState(
-        val question: QuestionEntity?,
-        val draft: AnswerDraftEntity?,
-        val attempts: List<PracticeAttemptEntity>,
-        val currentAnswer: String,
-        val inputMethod: AnswerInputMethod
+        val question:
+        QuestionEntity?,
+        val draft:
+        AnswerDraftEntity?,
+        val attempts:
+        List<PracticeAttemptEntity>,
+        val currentAnswer:
+        String,
+        val inputMethod:
+        AnswerInputMethod
     )
 
     private data class ProcessingState(
-        val isDraftSaved: Boolean,
-        val isSubmitting: Boolean,
-        val submittedAttemptId: String?,
-        val pendingNavigationAttemptId: String?,
-        val errorMessage: String?
+        val isDraftSaved:
+        Boolean,
+        val isSubmitting:
+        Boolean,
+        val submittedAttemptId:
+        String?,
+        val pendingNavigationAttemptId:
+        String?,
+        val errorMessage:
+        String?
     )
+
+    private data class IdealAnswerState(
+        val idealAnswer:
+        IdealAnswerRepository.IdealAnswer?,
+        val isGenerating:
+        Boolean,
+        val errorMessage:
+        String?
+    )
+
+    private data class ComposerState(
+        val startedAt:
+        Long,
+        val selectedAttemptId:
+        String?,
+        val suggestedScript:
+        String?
+    )
+
+    companion object {
+        private const val DEFAULT_LANGUAGE_TAG =
+            "en"
+    }
 }

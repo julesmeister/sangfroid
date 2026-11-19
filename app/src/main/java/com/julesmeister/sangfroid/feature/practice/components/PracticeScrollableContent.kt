@@ -59,6 +59,8 @@ fun PracticeScrollableContent(
     onUseAttemptAsNewAnswer: (String) -> Unit,
     onOpenFeedback: (String) -> Unit,
     onEditorFocusChanged: (Boolean) -> Unit,
+    onShowIdealAnswer: () -> Unit,
+    onRefreshIdealAnswer: () -> Unit,
     compact: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -98,7 +100,9 @@ fun PracticeScrollableContent(
     LaunchedEffect(
         uiState.isViewingHistoricalAttempt
     ) {
-        if (uiState.isViewingHistoricalAttempt) {
+        if (
+            uiState.isViewingHistoricalAttempt
+        ) {
             isEditorFocused =
                 false
 
@@ -226,7 +230,9 @@ fun PracticeScrollableContent(
                 question =
                     question,
                 hasSuggestedScript =
-                    uiState.hasSuggestedScript
+                    uiState.hasSuggestedScript,
+                isGeneratingIdealAnswer =
+                    uiState.isGeneratingIdealAnswer
             )
         }
 
@@ -256,7 +262,11 @@ fun PracticeScrollableContent(
                     onEditorFocusChanged(
                         focused
                     )
-                }
+                },
+                onShowIdealAnswer =
+                    onShowIdealAnswer,
+                onRefreshIdealAnswer =
+                    onRefreshIdealAnswer
             )
         }
 
@@ -275,7 +285,9 @@ private fun CurrentAnswerComposer(
     speechUiState: SpeechUiState,
     isExpanded: Boolean,
     onAnswerChanged: (String) -> Unit,
-    onEditorFocusChanged: (Boolean) -> Unit
+    onEditorFocusChanged: (Boolean) -> Unit,
+    onShowIdealAnswer: () -> Unit,
+    onRefreshIdealAnswer: () -> Unit
 ) {
     Column(
         modifier =
@@ -298,6 +310,16 @@ private fun CurrentAnswerComposer(
                 onEditorFocusChanged,
             suggestedScript =
                 uiState.suggestedScript,
+            hasIdealAnswer =
+                uiState.hasIdealAnswer,
+            isGeneratingIdealAnswer =
+                uiState.isGeneratingIdealAnswer,
+            idealAnswerEnabled =
+                uiState.canGenerateIdealAnswer,
+            onGenerateIdealAnswer =
+                onShowIdealAnswer,
+            onRefreshIdealAnswer =
+                onRefreshIdealAnswer,
             modifier =
                 if (isExpanded) {
                     Modifier
@@ -386,7 +408,8 @@ private fun CurrentAnswerComposer(
 @Composable
 private fun ExpandedQuestionReminder(
     question: QuestionEntity,
-    hasSuggestedScript: Boolean
+    hasSuggestedScript: Boolean,
+    isGeneratingIdealAnswer: Boolean
 ) {
     Column(
         modifier =
@@ -407,10 +430,15 @@ private fun ExpandedQuestionReminder(
     ) {
         Text(
             text =
-                if (hasSuggestedScript) {
-                    "GUIDED PRACTICE"
-                } else {
-                    "ANSWERING"
+                when {
+                    isGeneratingIdealAnswer ->
+                        "PREPARING IDEAL ANSWER"
+
+                    hasSuggestedScript ->
+                        "GUIDED PRACTICE"
+
+                    else ->
+                        "ANSWERING"
                 },
             style =
                 MaterialTheme
@@ -472,7 +500,10 @@ private fun ExpandedEditorFooter(
     ) {
         Text(
             text =
-                if (wordCount == 1) {
+                if (
+                    wordCount ==
+                    1
+                ) {
                     "1 word"
                 } else {
                     "$wordCount words"
@@ -490,26 +521,21 @@ private fun ExpandedEditorFooter(
         Text(
             text =
                 when {
-                    isProcessing -> {
+                    isProcessing ->
                         "Refining offline…"
-                    }
 
                     isRecording &&
-                            hasSuggestedScript -> {
+                            hasSuggestedScript ->
                         "Guided listening…"
-                    }
 
-                    isRecording -> {
+                    isRecording ->
                         "Listening…"
-                    }
 
-                    isDraftSaved -> {
+                    isDraftSaved ->
                         "Saved"
-                    }
 
-                    else -> {
+                    else ->
                         "Saving…"
-                    }
                 },
             style =
                 MaterialTheme
@@ -530,7 +556,8 @@ private fun PracticeMessages(
 ) {
     AnimatedVisibility(
         visible =
-            speechUiState.errorMessage != null,
+            speechUiState.errorMessage !=
+                    null,
         enter =
             fadeIn() +
                     expandVertically(),
@@ -559,7 +586,38 @@ private fun PracticeMessages(
 
     AnimatedVisibility(
         visible =
-            uiState.errorMessage != null,
+            uiState.idealAnswerErrorMessage !=
+                    null,
+        enter =
+            fadeIn() +
+                    expandVertically(),
+        exit =
+            fadeOut() +
+                    shrinkVertically()
+    ) {
+        Column {
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        SangfroidSpacing.Md
+                    )
+            )
+
+            PracticeErrorPanel(
+                title =
+                    "Ideal answer unavailable",
+                message =
+                    uiState
+                        .idealAnswerErrorMessage
+                        .orEmpty()
+            )
+        }
+    }
+
+    AnimatedVisibility(
+        visible =
+            uiState.errorMessage !=
+                    null,
         enter =
             fadeIn() +
                     expandVertically(),
@@ -588,7 +646,8 @@ private fun PracticeMessages(
 
     AnimatedVisibility(
         visible =
-            uiState.submittedAttemptId != null,
+            uiState.submittedAttemptId !=
+                    null,
         enter =
             fadeIn() +
                     scaleIn(
@@ -649,7 +708,9 @@ private fun buildDisplayedAnswerForCount(
     partialTranscript: String,
     isRecording: Boolean
 ): String {
-    if (!isRecording) {
+    if (
+        !isRecording
+    ) {
         return storedAnswer
     }
 
@@ -659,11 +720,15 @@ private fun buildDisplayedAnswerForCount(
     val partial =
         partialTranscript.trim()
 
-    if (partial.isBlank()) {
+    if (
+        partial.isBlank()
+    ) {
         return storedAnswer
     }
 
-    if (committed.isBlank()) {
+    if (
+        committed.isBlank()
+    ) {
         return partial
     }
 

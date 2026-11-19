@@ -7,6 +7,8 @@ import com.julesmeister.sangfroid.data.remote.dto.CvAnalysisRequestDto
 import com.julesmeister.sangfroid.data.remote.dto.CvAnalysisResponseDto
 import com.julesmeister.sangfroid.data.remote.dto.EvaluationRequestDto
 import com.julesmeister.sangfroid.data.remote.dto.EvaluationResponseDto
+import com.julesmeister.sangfroid.data.remote.dto.IdealAnswerRequestDto
+import com.julesmeister.sangfroid.data.remote.dto.IdealAnswerResponseDto
 import com.julesmeister.sangfroid.data.remote.dto.QuestionGenerationRequestDto
 import com.julesmeister.sangfroid.data.remote.dto.QuestionGenerationResponseDto
 import com.julesmeister.sangfroid.data.remote.dto.QuestionImportRequestDto
@@ -30,7 +32,8 @@ import org.json.JSONObject
 
 @Singleton
 class HttpSangfroidApi @Inject constructor(
-    private val authTokenProvider: AuthTokenProvider
+    private val authTokenProvider:
+    AuthTokenProvider
 ) : SangfroidApi {
 
     override suspend fun evaluateAnswer(
@@ -87,6 +90,25 @@ class HttpSangfroidApi @Inject constructor(
                 RetryPolicy.None,
             parser =
                 QuestionImportResponseDto::fromJson
+        )
+    }
+
+    override suspend fun generateIdealAnswer(
+        request: IdealAnswerRequestDto
+    ): Result<IdealAnswerResponseDto> {
+        return executePost(
+            path =
+                IDEAL_ANSWER_PATH,
+            requestId =
+                request.requestId,
+            requestBody =
+                request.toJson(),
+            timeoutPolicy =
+                TimeoutPolicy.LongRunning,
+            retryPolicy =
+                RetryPolicy.None,
+            parser =
+                IdealAnswerResponseDto::fromJson
         )
     }
 
@@ -614,6 +636,10 @@ class HttpSangfroidApi @Inject constructor(
                 "Question extraction is taking longer than expected. " +
                         "Your existing questions are safe. Try again in a moment."
 
+            IDEAL_ANSWER_PATH ->
+                "Ideal-answer generation is taking longer than expected. " +
+                        "Your current answer is safe. Try again in a moment."
+
             CV_ANALYSIS_PATH ->
                 "CV analysis is taking longer than expected. Try again in a moment."
 
@@ -796,7 +822,6 @@ class HttpSangfroidApi @Inject constructor(
         val connectTimeoutMillis: Int,
         val readTimeoutMillis: Int
     ) {
-
         data object Standard :
             TimeoutPolicy(
                 connectTimeoutMillis =
@@ -817,7 +842,6 @@ class HttpSangfroidApi @Inject constructor(
     private sealed class RetryPolicy(
         val maximumAttempts: Int
     ) {
-
         abstract fun delayFor(
             failedAttempt: Int
         ): Long
@@ -827,7 +851,6 @@ class HttpSangfroidApi @Inject constructor(
                 maximumAttempts =
                     1
             ) {
-
             override fun delayFor(
                 failedAttempt: Int
             ): Long {
@@ -840,7 +863,6 @@ class HttpSangfroidApi @Inject constructor(
                 maximumAttempts =
                     2
             ) {
-
             override fun delayFor(
                 failedAttempt: Int
             ): Long {
@@ -869,6 +891,9 @@ class HttpSangfroidApi @Inject constructor(
 
         private const val QUESTION_IMPORT_PATH =
             "/v1/questions/import"
+
+        private const val IDEAL_ANSWER_PATH =
+            "/v1/questions/ideal-answer"
 
         private const val CV_ANALYSIS_PATH =
             "/v1/cv/analyze"

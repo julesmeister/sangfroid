@@ -29,6 +29,7 @@ import com.julesmeister.sangfroid.data.repository.OfflineFirstQuestionImportRepo
 import com.julesmeister.sangfroid.data.repository.OfflinePracticeRepository
 import com.julesmeister.sangfroid.data.repository.OfflineProfileRepository
 import com.julesmeister.sangfroid.data.repository.OfflineQuestionRepository
+import com.julesmeister.sangfroid.data.repository.RemoteIdealAnswerRepository
 import com.julesmeister.sangfroid.data.speech.SherpaOnlineStreamingEngineFactory
 import com.julesmeister.sangfroid.data.speech.SherpaSpeechRecognizer
 import com.julesmeister.sangfroid.data.speech.SherpaStreamingEngineFactory
@@ -40,6 +41,7 @@ import com.julesmeister.sangfroid.domain.evaluation.AnswerEvaluationEngine
 import com.julesmeister.sangfroid.domain.history.PracticeHistoryRepository
 import com.julesmeister.sangfroid.domain.progress.QuestionProgressRepository
 import com.julesmeister.sangfroid.domain.repository.EvaluationRepository
+import com.julesmeister.sangfroid.domain.repository.IdealAnswerRepository
 import com.julesmeister.sangfroid.domain.repository.PracticeRepository
 import com.julesmeister.sangfroid.domain.repository.ProfileRepository
 import com.julesmeister.sangfroid.domain.repository.QuestionGenerationRepository
@@ -176,6 +178,13 @@ abstract class RepositoryBindingModule {
         implementation:
         OfflineFirstQuestionImportRepository
     ): QuestionImportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindIdealAnswerRepository(
+        implementation:
+        RemoteIdealAnswerRepository
+    ): IdealAnswerRepository
 
     @Binds
     @Singleton
