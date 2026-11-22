@@ -12,7 +12,7 @@ A **Java Spring Boot backend** handles Qwen-powered CV analysis, question genera
 `Kotlin` · `Jetpack Compose` · `MVVM` · `Room` · `Hilt` · `Retrofit` · `StateFlow` · `Spring Boot` · `Qwen` · `AWS`
 
 <p align="center">
-  <img src="docs/screenshots/feed.png" width="320" alt="Sangfroid personalized interview question feed">
+  <img src="docs/images/feed.png" width="320" alt="Sangfroid personalized interview question feed">
 </p>
 
 ## From CV to Better Answers
